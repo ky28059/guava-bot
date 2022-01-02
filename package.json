@@ -1,0 +1,18 @@
+{
+  "name": "guava-bot",
+  "description": "Reverse engineered !whois bot for a certain elusive discord server",
+  "main": "bot.ts",
+  "dependencies": {
+    "@discordjs/builders": "^0.11.0",
+    "@discordjs/rest": "^0.2.0-canary.0",
+    "discord-api-types": "^0.26.1",
+    "discord.js": "^13.5.0",
+    "node-fetch": "^2.6.1",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.4"
+  },
+  "scripts": {
+    "start": "ts-node bot.ts",
+    "registerSlashCommands": "ts-node registerSlashCommands.ts"
+  }
+}
