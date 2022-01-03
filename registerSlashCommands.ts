@@ -16,6 +16,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('fetch')
         .setDescription('Refetch the TSV data source.')
+        .toJSON()
 ];
 
 const clientId = '927093994754818069';

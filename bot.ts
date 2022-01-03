@@ -13,7 +13,7 @@ let data: SpreadsheetRow[] = [];
 // Refreshes current in-memory spreadsheet data
 async function refreshData() {
     const raw = await (await fetch(source)).text();
-    data = raw.split('\n').slice(1).map(row => row.split('\t') as SpreadsheetRow);
+    data = raw.split('\n').slice(1).map(row => row.split('\t').map(x => x.trim()) as SpreadsheetRow);
 }
 
 
@@ -47,7 +47,7 @@ client.on('messageCreate', async message => {
             // whois [user]
             case 'whois':
                 const [target] = args;
-                const id = target?.match(/^<@(\d+)>$/)?.[1] ?? target;
+                const id = target?.match(/^<@!?(\d+)>$/)?.[1] ?? target;
 
                 const user = client.users.cache.get(id);
                 if (!user) {
@@ -79,7 +79,7 @@ client.on('messageCreate', async message => {
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
-    if (interaction.commandName === 'whois') {
+    if (interaction.commandName === 'whois') { // /whois [user]
         const user = interaction.options.getUser('user')!;
         const info = getUserInfoById(user.id);
 
@@ -87,7 +87,8 @@ client.on('interactionCreate', async interaction => {
                 ? userInfoEmbed(user, info)
                 : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
             ]});
-    } else if (interaction.commandName === 'fetch') {
+
+    } else if (interaction.commandName === 'fetch') { // /fetch
         await refreshData();
         return interaction.reply({embeds: [success('Successfully refreshed database.')]});
     }
@@ -99,18 +100,20 @@ function getUserInfoById(id: string) {
 
 // Returns a MessageEmbed displaying the user's info
 function userInfoEmbed(user: User, info: SpreadsheetRow) {
-    const fields: EmbedFieldData[] = [
-        {name: 'Year', value: info[1], inline: true},
-        {name: 'Name', value: info[2], inline: true},
-        {name: 'Subgroup', value: info[3], inline: true},
-        // {name: 'GRT Year(s)', value: ..., inline: true}
-        {name: 'Discord', value: user.tag, inline: true}
-    ];
+    const [id, year, name, subgroup, years, period, minecraft] = info;
 
-    if (info[5]) fields.push({name: 'Period', value: info[5], inline: true});
-    if (info[6]) fields.push({name: 'Minecraft', value: info[6], inline: true});
+    const fields: EmbedFieldData[] = [];
 
-    return success('Guava Gang User Info', `Information about <@${user.id}>:`)
+    if (year) fields.push({name: 'Year', value: year, inline: true});
+    if (name) fields.push({name: 'Name', value: name, inline: true});
+    if (years) fields.push({name: 'GRT Years', value: years, inline: true});
+    if (subgroup) fields.push({name: 'Subgroup', value: subgroup, inline: true});
+    fields.push({name: 'Discord', value: user.tag, inline: true});
+    if (period) fields.push({name: 'Period', value: period, inline: true});
+    if (minecraft) fields.push({name: 'Minecraft', value: minecraft, inline: true});
+
+    return success('Guava Gang User Info', `Information about <@${user.id}>:`, /* source */)
+        .setThumbnail(user.displayAvatarURL({format: 'png', dynamic: true, size: 1024 }))
         .addFields(fields);
 }
 

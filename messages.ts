@@ -4,7 +4,7 @@ import {MessageEmbed} from 'discord.js';
 export function success(title: string, desc?: string) {
     const successEmbed = new MessageEmbed()
         .setColor(0xf6b40c)
-        .setAuthor({name: title});
+        .setTitle(title);
 
     if (desc) successEmbed.setDescription(desc);
     return successEmbed;
