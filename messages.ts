@@ -1,12 +1,18 @@
 import {MessageEmbed} from 'discord.js';
 
 
-export function success(title: string, desc?: string) {
+type EmbedOptions = {
+    title?: string, desc?: string, url?: string,
+    author?: string, authorURL?: string
+};
+export function success({title, desc, url, author, authorURL}: EmbedOptions) {
     const successEmbed = new MessageEmbed()
         .setColor(0xf6b40c)
-        .setTitle(title);
 
+    if (title) successEmbed.setTitle(title);
     if (desc) successEmbed.setDescription(desc);
+    if (url) successEmbed.setURL(url);
+    if (author) successEmbed.setAuthor({name: author, url: authorURL});
     return successEmbed;
 }
 

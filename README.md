@@ -4,10 +4,11 @@ Reverse engineered Artoo !whois bot for a certain elusive discord server. Most o
 
 https://discord.com/oauth2/authorize?client_id=927093994754818069&scope=bot+applications.commands&permissions=8
 
-To run locally, create a `config.ts` in the root directory which exports your bot token and TSV source:
+To run locally, create a `config.ts` in the root directory which exports your bot token, spreadsheet link, and TSV source:
 ```ts
 // config.ts
 export const token = 'totally-real-discord-token';
+export const link = 'https://docs.google.com/spreadsheets/d/some-spreadsheet-id/edit?usp=sharing';
 export const source = 'https://docs.google.com/spreadsheets/d/e/some-spreadsheet-id/pub?gid=0&single=true&output=tsv';
 ```
 Install dependencies with `npm install`, run `npm run registerSlashCommands` to register slash commands with the Discord application, 

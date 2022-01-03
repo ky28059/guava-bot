@@ -1,7 +1,7 @@
 import {Client, EmbedFieldData, MessageEmbed, User} from 'discord.js';
 import fetch from 'node-fetch';
 import {success, error} from './messages';
-import {token, source} from './config';
+import {token, link, source} from './config';
 
 
 type SpreadsheetRow = [
@@ -65,7 +65,7 @@ client.on('messageCreate', async message => {
             // fetch
             case 'fetch':
                 await refreshData();
-                await message.reply({embeds: [success('Successfully refreshed database.')]});
+                await message.reply({embeds: [success({author: 'Successfully refreshed database.', authorURL: link})]});
                 return;
 
             // help
@@ -90,7 +90,7 @@ client.on('interactionCreate', async interaction => {
 
     } else if (interaction.commandName === 'fetch') { // /fetch
         await refreshData();
-        return interaction.reply({embeds: [success('Successfully refreshed database.')]});
+        return interaction.reply({embeds: [success({author: 'Successfully refreshed database.', authorURL: link})]});
     }
 });
 
@@ -112,7 +112,7 @@ function userInfoEmbed(user: User, info: SpreadsheetRow) {
     if (period) fields.push({name: 'Period', value: period, inline: true});
     if (minecraft) fields.push({name: 'Minecraft', value: minecraft, inline: true});
 
-    return success('Guava Gang User Info', `Information about <@${user.id}>:`, /* source */)
+    return success({title: 'Guava Gang User Info', desc: `Information about <@${user.id}>:`, url: link})
         .setThumbnail(user.displayAvatarURL({format: 'png', dynamic: true, size: 1024 }))
         .addFields(fields);
 }
