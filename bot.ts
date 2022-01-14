@@ -44,7 +44,7 @@ client.on('messageCreate', async message => {
         const commandName = args.shift()?.toLowerCase();
 
         switch (commandName) {
-            // whois [user]
+            // whois @[user]
             case 'whois':
                 const [target] = args;
                 const id = target?.match(/^<@!?(\d+)>$/)?.[1] ?? target;
@@ -56,10 +56,12 @@ client.on('messageCreate', async message => {
                 }
 
                 const info = getUserInfoById(user.id);
-                await message.reply({embeds: [info
+                await message.reply({
+                    embeds: [info
                         ? userInfoEmbed(user, info)
                         : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
-                    ]});
+                    ]
+                });
                 return;
 
             // fetch
@@ -70,8 +72,8 @@ client.on('messageCreate', async message => {
 
             // help
             case 'help':
-                // TODO
-                break;
+                await message.reply({embeds: [helpEmbed()]});
+                return;
         }
     }
 });
@@ -79,18 +81,23 @@ client.on('messageCreate', async message => {
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
-    if (interaction.commandName === 'whois') { // /whois [user]
+    if (interaction.commandName === 'whois') { // /whois @[user]
         const user = interaction.options.getUser('user')!;
         const info = getUserInfoById(user.id);
 
-        return interaction.reply({embeds: [info
+        return interaction.reply({
+            embeds: [info
                 ? userInfoEmbed(user, info)
                 : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
-            ]});
+            ]
+        });
 
     } else if (interaction.commandName === 'fetch') { // /fetch
         await refreshData();
         return interaction.reply({embeds: [success({author: 'Successfully refreshed database.', authorURL: link})]});
+
+    } else if (interaction.commandName === 'help') { // /help
+        return interaction.reply({embeds: [helpEmbed()]});
     }
 });
 
@@ -115,6 +122,16 @@ function userInfoEmbed(user: User, info: SpreadsheetRow) {
     return success({title: 'Guava Gang User Info', desc: `Information about <@${user.id}>:`, url: link})
         .setThumbnail(user.displayAvatarURL({format: 'png', dynamic: true, size: 1024 }))
         .addFields(fields);
+}
+
+// Returns a MessageEmbed with info about Guava Bot
+function helpEmbed() {
+    return success({title: 'Guava Bot', desc: `Guava Bot is open sourced on [GitHub](https://github.com/ky28059/guava-bot)! Edit the backing spreadsheet [here](${link}).`})
+        .addFields([
+            {name: 'whois @[user]', value: 'Gets info about the target user.', inline: true},
+            {name: 'fetch', value: 'Refetch the TSV data source.', inline: true},
+            {name: 'help', value: 'Sends info about this bot!', inline: true}
+        ]);
 }
 
 // Error handling

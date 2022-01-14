@@ -8,14 +8,18 @@ const commands = [
     new SlashCommandBuilder()
         .setName('whois')
         .setDescription('Get info about the target user.')
-        .addUserOption(option =>
-            option.setName('user')
-                .setDescription('The user to get info about')
-                .setRequired(true))
+        .addUserOption(option => option
+            .setName('user')
+            .setDescription('The user to get info about')
+            .setRequired(true))
         .toJSON(),
     new SlashCommandBuilder()
         .setName('fetch')
         .setDescription('Refetch the TSV data source.')
+        .toJSON(),
+    new SlashCommandBuilder()
+        .setName('help')
+        .setDescription('Sends info about Guava Bot!')
         .toJSON()
 ];
 
