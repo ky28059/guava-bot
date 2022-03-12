@@ -7,7 +7,7 @@ import { token } from './config';
 const commands = [
     new SlashCommandBuilder()
         .setName('whois')
-        .setDescription('Get info about the target user.')
+        .setDescription('Gets info about the target user.')
         .addUserOption(option => option
             .setName('user')
             .setDescription('The user to get info about')
@@ -15,7 +15,11 @@ const commands = [
         .toJSON(),
     new SlashCommandBuilder()
         .setName('fetch')
-        .setDescription('Refetch the TSV data source.')
+        .setDescription('Refetches the TSV data source.')
+        .toJSON(),
+    new SlashCommandBuilder()
+        .setName('counting')
+        .setDescription('Returns the current counting channel number.')
         .toJSON(),
     new SlashCommandBuilder()
         .setName('help')

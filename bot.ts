@@ -1,7 +1,7 @@
-import {Client, EmbedFieldData, MessageEmbed, User} from 'discord.js';
+import {Client, EmbedFieldData, MessageEmbed, TextChannel, User} from 'discord.js';
 import fetch from 'node-fetch';
 import {success, error} from './messages';
-import {token, link, source} from './config';
+import {token, link, source, countingId} from './config';
 
 
 type SpreadsheetRow = [
@@ -16,6 +16,10 @@ async function refreshData() {
     data = raw.split('\n').slice(1).map(row => row.split('\t').map(x => x.trim()) as SpreadsheetRow);
 }
 
+// Current counting number and last user ID for counting channel passive enforcement
+let currentNum: number;
+let lastUserId: string;
+
 
 const client = new Client({
     intents: [
@@ -29,14 +33,42 @@ const client = new Client({
     allowedMentions: {repliedUser: false}
 });
 
+// Fetch spreadsheet data and counting number on ready
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user?.tag}!`);
     await refreshData();
+
+    // Parse last counting number
+    const countingChannel = await client.channels.fetch(countingId) as TextChannel;
+    const message = countingChannel.lastMessage;
+    const match = message?.content.match(/\d+/);
+
+    // If the last message does not exist or was not parseable, try the last 100.
+    if (!message || !match) {
+        for (const message of (await countingChannel.messages.fetch({limit: 100})).values()) {
+            const match = message.content.match(/\d+/);
+            if (!match) continue;
+            currentNum = Number(match[0]);
+            lastUserId = message.author.id;
+            break;
+        }
+        return;
+    }
+    currentNum = Number(match[0]);
+    lastUserId = message.author.id;
 });
 
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
     if (message.channel.type === 'DM') return;
+
+    // Enforce counting channel "rules"
+    if (message.channel.id === countingId) {
+        if (!message.content.includes((currentNum + 1).toString())) await message.react('🚩');
+        if (message.author.id === lastUserId) await message.react('🙅');
+        lastUserId = message.author.id;
+        currentNum++;
+    }
 
     const prefix = 'g';
     if (message.content.substring(0, prefix.length) === prefix) {
@@ -50,30 +82,39 @@ client.on('messageCreate', async message => {
                 const id = target?.match(/^<@!?(\d+)>$/)?.[1] ?? target;
 
                 const user = client.users.cache.get(id);
-                if (!user) {
-                    await message.reply({embeds: [error('Invalid user provided.')]})
-                    return;
-                }
+                if (!user)
+                    return void await message.reply({embeds: [error('Invalid user provided.')]});
 
                 const info = getUserInfoById(user.id);
-                await message.reply({
+                return void await message.reply({
                     embeds: [info
                         ? userInfoEmbed(user, info)
                         : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
                     ]
                 });
-                return;
 
             // fetch
             case 'fetch':
                 await refreshData();
-                await message.reply({embeds: [success({author: 'Successfully refreshed database.', authorURL: link})]});
-                return;
+                return void await message.reply({
+                    embeds: [success({
+                        author: 'Successfully refreshed database.',
+                        authorURL: link
+                    })]
+                });
+
+            // counting
+            case 'counting':
+                return void await message.reply({
+                    embeds: [success({
+                        author: `The current #counting number is ${currentNum}.`,
+                        desc: 'Wrong? File a bug report with <@355534246439419904>.'
+                    })]
+                });
 
             // help
             case 'help':
-                await message.reply({embeds: [helpEmbed()]});
-                return;
+                return void await message.reply({embeds: [helpEmbed()]});
         }
     }
 });
@@ -91,11 +132,21 @@ client.on('interactionCreate', async interaction => {
                 : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
             ]
         });
-
     } else if (interaction.commandName === 'fetch') { // /fetch
         await refreshData();
-        return interaction.reply({embeds: [success({author: 'Successfully refreshed database.', authorURL: link})]});
-
+        return interaction.reply({
+            embeds: [success({
+                author: 'Successfully refreshed database.',
+                authorURL: link
+            })]
+        });
+    } else if (interaction.commandName === 'counting') { // /currentNumber
+        return interaction.reply({
+            embeds: [success({
+                author: `The current #counting number is ${currentNum}.`,
+                desc: 'Wrong? File a bug report with <@355534246439419904>.'
+            })]
+        });
     } else if (interaction.commandName === 'help') { // /help
         return interaction.reply({embeds: [helpEmbed()]});
     }
@@ -126,12 +177,15 @@ function userInfoEmbed(user: User, info: SpreadsheetRow) {
 
 // Returns a MessageEmbed with info about Guava Bot
 function helpEmbed() {
-    return success({title: 'Guava Bot', desc: `Guava Bot is open sourced on [GitHub](https://github.com/ky28059/guava-bot)! Edit the backing spreadsheet [here](${link}).`})
-        .addFields([
-            {name: 'whois @[user]', value: 'Gets info about the target user.', inline: true},
-            {name: 'fetch', value: 'Refetch the TSV data source.', inline: true},
-            {name: 'help', value: 'Sends info about this bot!', inline: true}
-        ]);
+    return success({
+        title: 'Guava Bot',
+        desc: `Guava Bot is open sourced on [GitHub](https://github.com/ky28059/guava-bot)! Edit the backing spreadsheet [here](${link}).`
+    }).addFields([
+        {name: 'whois @[user]', value: 'Gets info about the target user.', inline: true},
+        {name: 'fetch', value: 'Refetches the TSV data source.', inline: true},
+        {name: 'counting', value: 'Returns the current counting channel number.', inline: true},
+        {name: 'help', value: 'Sends info about this bot!', inline: true}
+    ]);
 }
 
 // Error handling
