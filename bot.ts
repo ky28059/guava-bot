@@ -1,4 +1,4 @@
-import {Client, EmbedFieldData, MessageEmbed, TextChannel, User} from 'discord.js';
+import {Client, EmbedFieldData, Message, MessageEmbed, TextChannel, User} from 'discord.js';
 import fetch from 'node-fetch';
 import {success, error} from './messages';
 import {token, link, source, countingId} from './config';
@@ -18,7 +18,7 @@ async function refreshData() {
 
 // Current counting number and last user ID for counting channel passive enforcement
 let currentNum: number;
-let lastUserId: string;
+let lastMessage: Message;
 
 
 const client = new Client({
@@ -49,24 +49,28 @@ client.once('ready', async () => {
             const match = message.content.match(/\d+/);
             if (!match) continue;
             currentNum = Number(match[0]);
-            lastUserId = message.author.id;
+            lastMessage = message;
             break;
         }
         return;
     }
     currentNum = Number(match[0]);
-    lastUserId = message.author.id;
+    lastMessage = message;
 });
 
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
     if (message.channel.type === 'DM') return;
 
-    // Enforce counting channel "rules"
+    // Enforce counting channel rules
     if (message.channel.id === countingId) {
+        // If the number isn't the next number in the sequence, flag it
         if (!message.content.includes((currentNum + 1).toString())) await message.react('🚩');
-        if (message.author.id === lastUserId) await message.react('🙅');
-        lastUserId = message.author.id;
+        // If the number was sent by the same person as the previous number and there isn't a 1-day gap between
+        // messages, flag it
+        if (message.author.id === lastMessage.author.id && message.createdTimestamp - lastMessage.createdTimestamp < 1000 * 60 * 60 * 24)
+            await message.react('🙅');
+        lastMessage = message;
         currentNum++;
     }
 
