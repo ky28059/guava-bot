@@ -1,10 +1,10 @@
-import {Client, EmbedFieldData, Message, MessageEmbed, TextChannel, User} from 'discord.js';
+import {Client, Message, TextChannel} from 'discord.js';
 import fetch from 'node-fetch';
-import {success, error} from './messages';
+import {error, countingEmbed, helpEmbed, userInfoEmbed, refreshedEmbed, resetEmbed} from './messages';
 import {token, link, source, countingId} from './config';
 
 
-type SpreadsheetRow = [
+export type SpreadsheetRow = [
     id: string, year: string, name: string, subgroup: string, years: string,
     period: string, minecraft: string
 ];
@@ -37,7 +37,11 @@ const client = new Client({
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user?.tag}!`);
     await refreshData();
+    await fetchCountingNumber();
+});
 
+// Fetches the counting number from the last parseable message in #counting.
+async function fetchCountingNumber() {
     // Parse last counting number
     const countingChannel = await client.channels.fetch(countingId) as TextChannel;
     const message = countingChannel.lastMessage;
@@ -52,11 +56,11 @@ client.once('ready', async () => {
             lastMessage = message;
             break;
         }
-        return;
+        return; // We hope this never triggers!
     }
     currentNum = Number(match[0]);
     lastMessage = message;
-});
+}
 
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
@@ -100,21 +104,16 @@ client.on('messageCreate', async message => {
             // fetch
             case 'fetch':
                 await refreshData();
-                return void await message.reply({
-                    embeds: [success({
-                        author: 'Successfully refreshed database.',
-                        authorURL: link
-                    })]
-                });
+                return void await message.reply({embeds: [refreshedEmbed()]});
 
             // counting
             case 'counting':
-                return void await message.reply({
-                    embeds: [success({
-                        author: `The current #counting number is ${currentNum}.`,
-                        desc: 'Wrong? File a bug report with <@355534246439419904>.'
-                    })]
-                });
+                return void await message.reply({embeds: [countingEmbed(currentNum)]});
+
+            // reset
+            case 'reset':
+                await fetchCountingNumber();
+                return void await message.reply({embeds: [resetEmbed(currentNum)]});
 
             // help
             case 'help':
@@ -138,19 +137,12 @@ client.on('interactionCreate', async interaction => {
         });
     } else if (interaction.commandName === 'fetch') { // /fetch
         await refreshData();
-        return interaction.reply({
-            embeds: [success({
-                author: 'Successfully refreshed database.',
-                authorURL: link
-            })]
-        });
+        return interaction.reply({embeds: [refreshedEmbed()]});
     } else if (interaction.commandName === 'counting') { // /currentNumber
-        return interaction.reply({
-            embeds: [success({
-                author: `The current #counting number is ${currentNum}.`,
-                desc: 'Wrong? File a bug report with <@355534246439419904>.'
-            })]
-        });
+        return interaction.reply({embeds: [countingEmbed(currentNum)]});
+    } else if (interaction.commandName === 'reset') { // /reset
+        await fetchCountingNumber();
+        return interaction.reply({embeds: [resetEmbed(currentNum)]});
     } else if (interaction.commandName === 'help') { // /help
         return interaction.reply({embeds: [helpEmbed()]});
     }
@@ -158,38 +150,6 @@ client.on('interactionCreate', async interaction => {
 
 function getUserInfoById(id: string) {
     return data.find(row => row[0] === id);
-}
-
-// Returns a MessageEmbed displaying the user's info
-function userInfoEmbed(user: User, info: SpreadsheetRow) {
-    const [id, year, name, subgroup, years, period, minecraft] = info;
-
-    const fields: EmbedFieldData[] = [];
-
-    if (year) fields.push({name: 'Year', value: year, inline: true});
-    if (name) fields.push({name: 'Name', value: name, inline: true});
-    if (years) fields.push({name: 'GRT Years', value: years, inline: true});
-    if (subgroup) fields.push({name: 'Subgroup', value: subgroup, inline: true});
-    fields.push({name: 'Discord', value: user.tag, inline: true});
-    if (period) fields.push({name: 'Period', value: period, inline: true});
-    if (minecraft) fields.push({name: 'Minecraft', value: minecraft, inline: true});
-
-    return success({title: 'Guava Gang User Info', desc: `Information about <@${user.id}>:`, url: link})
-        .setThumbnail(user.displayAvatarURL({format: 'png', dynamic: true, size: 1024 }))
-        .addFields(fields);
-}
-
-// Returns a MessageEmbed with info about Guava Bot
-function helpEmbed() {
-    return success({
-        title: 'Guava Bot',
-        desc: `Guava Bot is open sourced on [GitHub](https://github.com/ky28059/guava-bot)! Edit the backing spreadsheet [here](${link}).`
-    }).addFields([
-        {name: 'whois @[user]', value: 'Gets info about the target user.', inline: true},
-        {name: 'fetch', value: 'Refetches the TSV data source.', inline: true},
-        {name: 'counting', value: 'Returns the current counting channel number.', inline: true},
-        {name: 'help', value: 'Sends info about this bot!', inline: true}
-    ]);
 }
 
 // Error handling

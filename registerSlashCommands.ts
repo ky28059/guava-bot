@@ -22,6 +22,10 @@ const commands = [
         .setDescription('Returns the current counting channel number.')
         .toJSON(),
     new SlashCommandBuilder()
+        .setName('reset')
+        .setDescription('Force resets the counting number.')
+        .toJSON(),
+    new SlashCommandBuilder()
         .setName('help')
         .setDescription('Sends info about Guava Bot!')
         .toJSON()
