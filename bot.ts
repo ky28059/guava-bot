@@ -1,6 +1,6 @@
 import {Client, Message, TextChannel} from 'discord.js';
 import fetch from 'node-fetch';
-import {error, countingEmbed, helpEmbed, userInfoEmbed, refreshedEmbed, resetEmbed} from './messages';
+import {error, userInfoEmbed, success} from './messages';
 import {token, link, source, countingId} from './config';
 
 
@@ -77,49 +77,6 @@ client.on('messageCreate', async message => {
         lastMessage = message;
         currentNum++;
     }
-
-    const prefix = 'g';
-    if (message.content.substring(0, prefix.length) === prefix) {
-        const args = message.content.slice(prefix.length).trim().split(/ +/g);
-        const commandName = args.shift()?.toLowerCase();
-
-        switch (commandName) {
-            // whois @[user]
-            case 'whois':
-                const [target] = args;
-                const id = target?.match(/^<@!?(\d+)>$/)?.[1] ?? target;
-
-                const user = client.users.cache.get(id);
-                if (!user)
-                    return void await message.reply({embeds: [error('Invalid user provided.')]});
-
-                const info = getUserInfoById(user.id);
-                return void await message.reply({
-                    embeds: [info
-                        ? userInfoEmbed(user, info)
-                        : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
-                    ]
-                });
-
-            // fetch
-            case 'fetch':
-                await refreshData();
-                return void await message.reply({embeds: [refreshedEmbed()]});
-
-            // counting
-            case 'counting':
-                return void await message.reply({embeds: [countingEmbed(currentNum)]});
-
-            // reset
-            case 'reset':
-                await fetchCountingNumber();
-                return void await message.reply({embeds: [resetEmbed(currentNum)]});
-
-            // help
-            case 'help':
-                return void await message.reply({embeds: [helpEmbed()]});
-        }
-    }
 });
 
 client.on('interactionCreate', async interaction => {
@@ -135,16 +92,38 @@ client.on('interactionCreate', async interaction => {
                 : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
             ]
         });
-    } else if (interaction.commandName === 'fetch') { // /fetch
+    }
+    if (interaction.commandName === 'fetch') { // /fetch
         await refreshData();
-        return interaction.reply({embeds: [refreshedEmbed()]});
-    } else if (interaction.commandName === 'counting') { // /currentNumber
-        return interaction.reply({embeds: [countingEmbed(currentNum)]});
-    } else if (interaction.commandName === 'reset') { // /reset
+        const refreshedEmbed = success()
+            .setAuthor({name: 'Successfully refreshed database.', url: link})
+        return interaction.reply({embeds: [refreshedEmbed]});
+    }
+    if (interaction.commandName === 'counting') { // /currentNumber
+        const countingEmbed = success()
+            .setAuthor({name: `The current #counting number is ${currentNum}.`})
+            .setDescription('Wrong? Try `/reset` or file a bug report with <@355534246439419904>.')
+        return interaction.reply({embeds: [countingEmbed]});
+    }
+    if (interaction.commandName === 'reset') { // /reset
         await fetchCountingNumber();
-        return interaction.reply({embeds: [resetEmbed(currentNum)]});
-    } else if (interaction.commandName === 'help') { // /help
-        return interaction.reply({embeds: [helpEmbed()]});
+        const resetEmbed = success()
+            .setAuthor({name: `The #counting number has been reset to ${currentNum}.`})
+        return interaction.reply({embeds: [resetEmbed]});
+    }
+    if (interaction.commandName === 'help') { // /help
+        const helpEmbed = success()
+            .setTitle('Guava Bot')
+            .setDescription(`Guava Bot is open sourced on [GitHub](https://github.com/ky28059/guava-bot)! Edit the backing spreadsheet [here](${link}).`)
+            .addFields([
+                {name: '/whois @[user]', value: 'Gets info about the target user.', inline: true},
+                {name: '/fetch', value: 'Refetches the TSV data source.', inline: true},
+                {name: '/counting', value: 'Returns the current counting channel number.', inline: true},
+                {name: '/reset', value: 'Force resets the counting number.', inline: true},
+                {name: '/help', value: 'Sends info about this bot!', inline: true}
+            ]);
+        return interaction.reply({embeds: [helpEmbed]});
+    }
     }
 });
 
