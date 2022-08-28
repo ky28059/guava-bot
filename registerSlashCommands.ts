@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { REST } from '@discordjs/rest';
-import { Routes } from 'discord-api-types/v9';
+import {PermissionFlagsBits, Routes} from 'discord-api-types/v9';
 import { token } from './config';
 
 
@@ -28,6 +28,12 @@ const commands = [
     new SlashCommandBuilder()
         .setName('help')
         .setDescription('Sends info about Guava Bot!')
+        .toJSON(),
+    new SlashCommandBuilder()
+        .setName('server-update')
+        .setDescription('Updates member roles across the server.')
+        .setDMPermission(false)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
         .toJSON()
 ];
 

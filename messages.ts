@@ -1,14 +1,14 @@
-import {EmbedFieldData, MessageEmbed, User} from 'discord.js';
+import {EmbedBuilder, EmbedField, User} from 'discord.js';
 import {SpreadsheetRow} from './bot';
 import {link} from './config';
 
 
 export function success() {
-    return new MessageEmbed().setColor(0xf6b40c);
+    return new EmbedBuilder().setColor(0xf6b40c);
 }
 
 export function error(title: string, desc?: string) {
-    const errorEmbed = new MessageEmbed()
+    const errorEmbed = new EmbedBuilder()
         .setColor(0xb50300)
         .setAuthor({name: title});
 
@@ -20,7 +20,7 @@ export function error(title: string, desc?: string) {
 export function userInfoEmbed(user: User, info: SpreadsheetRow) {
     const [id, year, name, subgroup, years, period, minecraft] = info;
 
-    const fields: EmbedFieldData[] = [];
+    const fields: EmbedField[] = [];
 
     if (year) fields.push({name: 'Year', value: year, inline: true});
     if (name) fields.push({name: 'Name', value: name, inline: true});
@@ -34,6 +34,7 @@ export function userInfoEmbed(user: User, info: SpreadsheetRow) {
         .setTitle('Guava Gang User Info')
         .setDescription(`Information about <@${user.id}>:`)
         .setURL(link)
-        .setThumbnail(user.displayAvatarURL({format: 'png', dynamic: true, size: 1024 }))
+        .setThumbnail(user.displayAvatarURL({size: 1024}))
         .addFields(fields);
 }
+ 

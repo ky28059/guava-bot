@@ -1,7 +1,7 @@
-import {Client, Message, TextChannel} from 'discord.js';
+import {ActivityType, ChannelType, Client, Message, TextChannel} from 'discord.js';
 import fetch from 'node-fetch';
-import {error, userInfoEmbed, success} from './messages';
-import {token, link, source, countingId} from './config';
+import {error, success, userInfoEmbed} from './messages';
+import {countingId, link, source, token} from './config';
 
 
 export type SpreadsheetRow = [
@@ -23,13 +23,13 @@ let lastMessage: Message;
 
 const client = new Client({
     intents: [
-        "GUILDS",
-        "GUILD_MESSAGES",
-        "GUILD_PRESENCES",
-        "GUILD_MEMBERS",
-        "GUILD_MESSAGE_REACTIONS",
+        "Guilds",
+        "GuildMessages",
+        "GuildPresences",
+        "GuildMembers",
+        "GuildMessageReactions",
     ],
-    presence: {activities: [{type: 'WATCHING', name: 'you.'}]},
+    presence: {activities: [{type: ActivityType.Watching, name: 'you.'}]},
     allowedMentions: {repliedUser: false}
 });
 
@@ -64,7 +64,7 @@ async function fetchCountingNumber() {
 
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
-    if (message.channel.type === 'DM') return;
+    if (message.channel.type === ChannelType.DM) return;
 
     // Enforce counting channel rules
     if (message.channel.id === countingId) {
@@ -86,7 +86,7 @@ client.on('interactionCreate', async interaction => {
         const user = interaction.options.getUser('user')!;
         const info = getUserInfoById(user.id);
 
-        return interaction.reply({
+        return void await interaction.reply({
             embeds: [info
                 ? userInfoEmbed(user, info)
                 : error('User not found.', `The requested user <@${user.id}> (${user.id}) was not found in the database. If they are in the spreadsheet, try doing /fetch.`)
@@ -97,33 +97,103 @@ client.on('interactionCreate', async interaction => {
         await refreshData();
         const refreshedEmbed = success()
             .setAuthor({name: 'Successfully refreshed database.', url: link})
-        return interaction.reply({embeds: [refreshedEmbed]});
+        return void await interaction.reply({embeds: [refreshedEmbed]});
     }
     if (interaction.commandName === 'counting') { // /currentNumber
         const countingEmbed = success()
             .setAuthor({name: `The current #counting number is ${currentNum}.`})
             .setDescription('Wrong? Try `/reset` or file a bug report with <@355534246439419904>.')
-        return interaction.reply({embeds: [countingEmbed]});
+        return void await interaction.reply({embeds: [countingEmbed]});
     }
     if (interaction.commandName === 'reset') { // /reset
         await fetchCountingNumber();
         const resetEmbed = success()
             .setAuthor({name: `The #counting number has been reset to ${currentNum}.`})
-        return interaction.reply({embeds: [resetEmbed]});
+        return void await interaction.reply({embeds: [resetEmbed]});
     }
     if (interaction.commandName === 'help') { // /help
         const helpEmbed = success()
             .setTitle('Guava Bot')
             .setDescription(`Guava Bot is open sourced on [GitHub](https://github.com/ky28059/guava-bot)! Edit the backing spreadsheet [here](${link}).`)
-            .addFields([
+            .addFields(
                 {name: '/whois @[user]', value: 'Gets info about the target user.', inline: true},
                 {name: '/fetch', value: 'Refetches the TSV data source.', inline: true},
                 {name: '/counting', value: 'Returns the current counting channel number.', inline: true},
                 {name: '/reset', value: 'Force resets the counting number.', inline: true},
                 {name: '/help', value: 'Sends info about this bot!', inline: true}
-            ]);
-        return interaction.reply({embeds: [helpEmbed]});
+            );
+        return void await interaction.reply({embeds: [helpEmbed]});
     }
+    if (interaction.commandName === 'server-update') { // /server-update
+        const members = client.guilds.cache.get('672196526809808917')!.members.cache;
+        const year = new Date().getFullYear();
+
+        let removed = 0;
+        let replaced = 0;
+
+        members.forEach((member) => {
+            const graduating = member.roles.cache.find((role) => role.name === year.toString());
+
+            // Leadership, Mech Lead, Animation, Business, CNC, Controls, DT, Pneumatics, Welding
+            const subgroupRoles = [
+                '672201645849051177', '672560919464640515', '672201172563525643', '672200311586160661',
+                '672200955353104394', '672199426441478147', '672199532540461096', '672197502451056727',
+                '672202451792822275'
+            ]
+            const subgroupAlumRoles = [
+                '757027038166253698', '757026560204341310', '757028193352941638', '757027351098818601',
+                '757027739168669726', '757027371885920356', '757027278281637989', '757026879042486393',
+                '757029219271180309'
+            ]
+
+            const newRoles = new Set([...member.roles.cache.map(role => role.id)]);
+
+            // TODO: better way to keep track of replaced / removed roles? The current setup makes the if statements
+            // a little ugly.
+            member.roles.cache.forEach((role) => {
+                // Remove period roles
+                if (role.id === '687020827794735228' || role.id === '687020871247855631') {
+                    newRoles.delete(role.id);
+                    return removed += 1;
+                }
+
+                // Change rookie to veteran
+                if (role.id === '748634881864761394') {
+                    newRoles.delete(role.id);
+                    newRoles.add('748647862346317865');
+                    return replaced += 1;
+                }
+
+                // If graduating, remove unemployed
+                if (!graduating) return;
+                if (role.id === '672199782181109770') {
+                    newRoles.delete(role.id);
+                    return removed += 1;
+                }
+
+                // If graduating, change veteran to boomer
+                if (role.id === '748647862346317865') {
+                    newRoles.delete(role.id);
+                    newRoles.add('672332582595330079');
+                    return replaced += 1;
+                }
+
+                // If graduating, change all subgroup roles to subgroup alum roles
+                const index = subgroupRoles.findIndex((id) => role.id === id);
+                if (index !== -1) {
+                    newRoles.delete(subgroupRoles[index])
+                    newRoles.add(subgroupAlumRoles[index]);
+                    return replaced += 1;
+                }
+            })
+
+            member.roles.set([...newRoles], `Role update for ${graduating ? 'graduating' : 'non-graduating'} member.`);
+        })
+
+        const updateEmbed = success()
+            .setTitle(`${year} server update`)
+            .setDescription(`Parsed ${members.size} members, removed ${removed} roles, and replaced ${replaced} roles. Remember that new positions still need to be added manually!`)
+        return void await interaction.reply({embeds: [updateEmbed]});
     }
 });
 
