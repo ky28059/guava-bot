@@ -28,6 +28,7 @@ const client = new Client({
         "GuildPresences",
         "GuildMembers",
         "GuildMessageReactions",
+        "MessageContent"
     ],
     presence: {activities: [{type: ActivityType.Watching, name: 'you.'}]},
     allowedMentions: {repliedUser: false}
