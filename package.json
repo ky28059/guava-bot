@@ -3,14 +3,14 @@
   "description": "Reverse engineered !whois bot for a certain elusive discord server",
   "main": "bot.ts",
   "dependencies": {
-    "@discordjs/builders": "^1.2.0",
-    "@discordjs/rest": "^1.1.0",
+    "@discordjs/builders": "^1.5.0",
+    "@discordjs/rest": "^1.6.0",
     "@types/node-fetch": "^2.5.12",
-    "discord-api-types": "^0.37.5",
-    "discord.js": "^14.3.0",
+    "discord-api-types": "^0.37.36",
+    "discord.js": "^14.8.0",
     "node-fetch": "^2.6.7",
     "ts-node": "^10.4.0",
-    "typescript": "^4.5.4"
+    "typescript": "^5.0.2"
   },
   "scripts": {
     "start": "ts-node bot.ts",

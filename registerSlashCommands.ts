@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { REST } from '@discordjs/rest';
-import {PermissionFlagsBits, Routes} from 'discord-api-types/v9';
+import { PermissionFlagsBits, Routes } from 'discord-api-types/v9';
 import { token } from './config';
 
 

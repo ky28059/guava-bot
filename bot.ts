@@ -44,7 +44,9 @@ client.once('ready', async () => {
 // Fetches the counting number from the last parseable message in #counting.
 async function fetchCountingNumber() {
     // Parse last counting number
-    const countingChannel = await client.channels.fetch(countingId) as TextChannel;
+    const countingChannel = await client.channels.fetch(countingId);
+    if (!countingChannel?.isTextBased()) return;
+
     const message = countingChannel.lastMessage;
     const match = message?.content.match(/\d+/);
 
