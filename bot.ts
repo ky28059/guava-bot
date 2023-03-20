@@ -1,4 +1,4 @@
-import {ActivityType, ChannelType, Client, Message, TextChannel} from 'discord.js';
+import {ActivityType, Client, Message} from 'discord.js';
 import fetch from 'node-fetch';
 import {error, success, userInfoEmbed} from './messages';
 import {countingId, link, source, token} from './config';
@@ -43,31 +43,30 @@ client.once('ready', async () => {
 
 // Fetches the counting number from the last parseable message in #counting.
 async function fetchCountingNumber() {
-    // Parse last counting number
     const countingChannel = await client.channels.fetch(countingId);
     if (!countingChannel?.isTextBased()) return;
 
-    const message = countingChannel.lastMessage;
-    const match = message?.content.match(/\d+/);
+    let message = countingChannel.lastMessage;
+    let match = message?.content.match(/\d+/);
 
-    // If the last message does not exist or was not parseable, try the last 100.
-    if (!message || !match) {
-        for (const message of (await countingChannel.messages.fetch({limit: 100})).values()) {
-            const match = message.content.match(/\d+/);
-            if (!match) continue;
-            currentNum = Number(match[0]);
-            lastMessage = message;
-            break;
+    // If the last message does not exist or was not parseable, repeatedly fetch in batches of 100
+    // until a match is found.
+    while (!message || !match) {
+        const messages = (await countingChannel.messages.fetch({limit: 100, before: message?.id})).values();
+        for (const fetchedMessage of messages) {
+            message = fetchedMessage;
+            match = fetchedMessage.content.match(/\d+/);
+            if (match) break;
         }
-        return; // We hope this never triggers!
     }
+
     currentNum = Number(match[0]);
     lastMessage = message;
 }
 
-client.on('messageCreate', async message => {
+client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-    if (message.channel.type === ChannelType.DM) return;
+    if (!message.inGuild()) return;
 
     // Enforce counting channel rules
     if (message.channel.id === countingId) {
@@ -82,7 +81,7 @@ client.on('messageCreate', async message => {
     }
 });
 
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async (interaction) => {
     if (!interaction.isCommand()) return;
 
     if (interaction.commandName === 'whois') { // /whois @[user]
@@ -198,6 +197,14 @@ client.on('interactionCreate', async interaction => {
             .setDescription(`Parsed ${members.size} members, removed ${removed} roles, and replaced ${replaced} roles. Remember that new positions still need to be added manually!`)
         return void await interaction.reply({embeds: [updateEmbed]});
     }
+});
+
+// Refetch counting number when the last message in #counting is deleted
+client.on('messageDelete', async (message) => {
+    if (message.author?.bot) return;
+    if (message.id !== lastMessage.id) return;
+
+    await fetchCountingNumber();
 });
 
 function getUserInfoById(id: string) {
